@@ -5,6 +5,9 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.dicoding.todoapp.R
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -31,6 +34,16 @@ abstract class TaskDatabase : RoomDatabase() {
                     "task.db"
                 ).build()
                 INSTANCE = instance
+                val preferences = context.getSharedPreferences("preferences",Context.MODE_PRIVATE)
+                val isLoad = preferences.getBoolean("isLoad",false)
+                if (!isLoad){
+                    preferences.edit().putBoolean("isLoad",true).apply()
+                    runBlocking {
+                        withContext(Dispatchers.IO){
+                            fillWithStartingData(context,instance.taskDao())
+                        }
+                    }
+                }
                 instance
             }
         }
