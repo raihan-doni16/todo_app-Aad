@@ -34,7 +34,7 @@ class TaskActivity : AppCompatActivity() {
         setContentView(R.layout.activity_task)
         setSupportActionBar(findViewById(R.id.toolbar))
 
-        findViewById<FloatingActionButton>(R.id.fab).setOnClickListener { view ->
+        findViewById<FloatingActionButton>(R.id.fab).setOnClickListener {
             val addIntent = Intent(this, AddTaskActivity::class.java)
             startActivity(addIntent)
         }
@@ -49,7 +49,7 @@ class TaskActivity : AppCompatActivity() {
         initAction()
 
         val factory = ViewModelFactory.getInstance(this)
-        taskViewModel = ViewModelProvider(this, factory).get(TaskViewModel::class.java)
+        taskViewModel = ViewModelProvider(this, factory)[TaskViewModel::class.java]
 
         taskViewModel.tasks.observe(this, Observer(this::showRecyclerView))
 

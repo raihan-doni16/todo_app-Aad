@@ -4,19 +4,18 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.dicoding.todoapp.R
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStreamReader
+import java.util.concurrent.Executors
 
-//TODO 3 : Define room database class and prepopulate database using JSON
-@Database(entities = [Task::class], version = 1, exportSchema = false)
+//TODO 3 : Define room database class and prepopulate database using JSON - Done
+@Database(entities = [Task::class], version = 2, exportSchema = false)
 abstract class TaskDatabase : RoomDatabase() {
 
     abstract fun taskDao(): TaskDao
@@ -25,6 +24,7 @@ abstract class TaskDatabase : RoomDatabase() {
 
         @Volatile
         private var INSTANCE: TaskDatabase? = null
+        val executor = Executors.newSingleThreadExecutor()!!
 
         fun getInstance(context: Context): TaskDatabase {
             return INSTANCE ?: synchronized(this) {
@@ -32,18 +32,19 @@ abstract class TaskDatabase : RoomDatabase() {
                     context.applicationContext,
                     TaskDatabase::class.java,
                     "task.db"
-                ).build()
-                INSTANCE = instance
-                val preferences = context.getSharedPreferences("preferences",Context.MODE_PRIVATE)
-                val isLoad = preferences.getBoolean("isLoad",false)
-                if (!isLoad){
-                    preferences.edit().putBoolean("isLoad",true).apply()
-                    runBlocking {
-                        withContext(Dispatchers.IO){
-                            fillWithStartingData(context,instance.taskDao())
+                ).fallbackToDestructiveMigration().addCallback(
+                    object :Callback(){
+                        override fun onCreate(db: SupportSQLiteDatabase) {
+                            super.onCreate(db)
+                            INSTANCE?.let { database ->
+                                executor.execute {
+                                    fillWithStartingData(context.applicationContext, database.taskDao())
+                                }
+                            }
                         }
                     }
-                }
+                ).build()
+                INSTANCE = instance
                 instance
             }
         }
@@ -60,7 +61,7 @@ abstract class TaskDatabase : RoomDatabase() {
                                 item.getString("title"),
                                 item.getString("description"),
                                 item.getLong("dueDate"),
-                                item.getBoolean("Completed")
+                                item.getBoolean("completed")
                             )
                         )
                     }
